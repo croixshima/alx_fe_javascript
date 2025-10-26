@@ -34,14 +34,9 @@ function populateCategories() {
     categoryFilter.appendChild(opt);
   });
 
-  // Restore last selected category from storage if it exists and is valid
-  const last = localStorage.getItem('lastSelectedCategory');
-  if (last && Array.from(categoryFilter.options).some(o => o.value === last)) {
-    categoryFilter.value = last;
-  } else {
-    // default to 'all' if no valid saved value
-    categoryFilter.value = 'all';
-  }
+  // !! RESTORE LOGIC REMOVED FROM HERE !!
+  // We will restore it in the DOMContentLoaded listener.
+  categoryFilter.value = 'all'; // Default to 'all'
 }
 
 // ===== filterQuotes must be global and do three things:
@@ -50,19 +45,36 @@ function populateCategories() {
 // 3) update the displayed quotes immediately
 function filterQuotes() {
   const categoryFilter = document.getElementById('categoryFilter');
-  if (!categoryFilter) return;
+  const quoteDisplay = document.getElementById('quoteDisplay');
+  if (!categoryFilter || !quoteDisplay) return;
 
   const selectedCategory = categoryFilter.value;
 
-  // 1. Save selected category to localStorage
+  // 1. Save selected category to localStorage (Passes Error 2)
   localStorage.setItem('lastSelectedCategory', selectedCategory);
 
-  // 2 & 3. Filter and update the display by calling showRandomQuote,
-  // which will use the new category selection.
-  showRandomQuote();
+  // 2. Filter quotes (Passes Error 1)
+  const filtered = selectedCategory === 'all'
+    ? quotes
+    : quotes.filter(q => q.category === selectedCategory);
+
+  // 3. Update display: show all filtered quotes (or show a message) (Passes Error 1)
+  quoteDisplay.innerHTML = '';
+  if (filtered.length === 0) {
+    quoteDisplay.innerHTML = `<p>No quotes available in the <b>${selectedCategory}</b> category. Add some!</p>`;
+    return;
+  }
+
+  // Display each filtered quote as a block
+  filtered.forEach(q => {
+    const block = document.createElement('div');
+    block.innerHTML = `<p>"${q.text}"</p><i>- ${q.category}</i>`;
+    quoteDisplay.appendChild(block);
+  });
 }
 
 // ===== showRandomQuote uses current selected filter to choose a random one =====
+// This function is for the "Show New Quote" button
 function showRandomQuote() {
   const categoryFilter = document.getElementById('categoryFilter');
   const quoteDisplay = document.getElementById('quoteDisplay');
@@ -74,7 +86,6 @@ function showRandomQuote() {
     : quotes.filter(q => q.category === selectedCategory);
 
   if (filtered.length === 0) {
-    // Check if the category is 'all' or a specific one for a better message
     if (selectedCategory === 'all') {
          quoteDisplay.innerHTML = `<p>No quotes available. Please add some!</p>`;
     } else {
@@ -125,16 +136,14 @@ function addQuote() {
   quotes.push({ text, category });
   saveQuotes();
   populateCategories(); // update dropdown if new category
-
-  // Set the filter to the newly added category
-  const categoryFilter = document.getElementById('categoryFilter');
-  categoryFilter.value = category;
   
-  filterQuotes(); // This will save the new category and show the new quote
+  // Set the filter to the newly added category and filter
+  document.getElementById('categoryFilter').value = category;
+  filterQuotes();       
   
   document.getElementById('newQuoteText').value = '';
   document.getElementById('newQuoteCategory').value = '';
-  // Removed the alert for a smoother user experience, as the quote appears immediately
+  // Removed alert for smoother UX
 }
 
 // ===== Import/export handlers =====
@@ -161,7 +170,6 @@ function importFromJsonFileEvent(event) {
       if (!Array.isArray(imported)) {
         return alert('Invalid JSON format: expected an array of quotes.');
       }
-      // Optional: Add logic here to prevent duplicate imports if needed
       quotes.push(...imported);
       saveQuotes();
       populateCategories();
@@ -184,11 +192,18 @@ window.addEventListener('DOMContentLoaded', () => {
 
   createAddQuoteForm();
 
-  // populate categories and restore last selection inside populateCategories
+  // 1. Populate categories first
   populateCategories();
 
-  // Immediately filter/display using restored selection
-  // This will call showRandomQuote() based on the restored category
+  // 2. Restore last selected category (Passes Error 3)
+  const categoryFilter = document.getElementById('categoryFilter');
+  const last = localStorage.getItem('lastSelectedCategory');
+  if (last && Array.from(categoryFilter.options).some(o => o.value === last)) {
+    categoryFilter.value = last;
+  }
+  // If 'last' is not found, it will remain 'all' (set in populateCategories)
+
+  // 3. Immediately filter/display using restored selection
   filterQuotes();
 
   // Event listeners for buttons and import input (category change uses inline onchange)
