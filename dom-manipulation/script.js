@@ -1,4 +1,4 @@
-// Array of initial quotes
+// 1. Array of initial quotes (serves as a fallback)
 let quotes = [
   {
     text: "The only way to do great work is to love what you do.",
@@ -14,51 +14,146 @@ let quotes = [
   }
 ];
 
-// Wait for the DOM to be fully loaded before running script
+// --- Task 2: Web Storage and JSON Functions (Global Scope) ---
+
+/**
+ * Saves the current 'quotes' array to localStorage.
+ */
+function saveQuotes() {
+  localStorage.setItem('quotes', JSON.stringify(quotes));
+}
+
+/**
+ * Exports the current 'quotes' array as a JSON file.
+ */
+function exportQuotes() {
+  // 1. Convert quotes array to a JSON string
+  // 'null, 2' formats the JSON to be human-readable
+  const jsonString = JSON.stringify(quotes, null, 2);
+
+  // 2. Create a Blob (Binary Large Object)
+  const blob = new Blob([jsonString], { type: 'application/json' });
+
+  // 3. Create a URL for the Blob
+  const url = URL.createObjectURL(blob);
+
+  // 4. Create a temporary 'a' (anchor) element to trigger the download
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'quotes.json'; // The filename for the download
+  
+  // 5. Add the 'a' element to the DOM, click it, and then remove it
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
+  // 6. Revoke the object URL to free up memory
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Imports quotes from a user-selected JSON file.
+ * This function is called by the 'onchange' attribute in the HTML.
+ */
+function importFromJsonFile(event) {
+  const file = event.target.files[0];
+  
+  if (!file) {
+    alert('No file selected.');
+    return;
+  }
+
+  const fileReader = new FileReader();
+
+  fileReader.onload = function(event) {
+    try {
+      const importedQuotes = JSON.parse(event.target.result);
+      
+      if (Array.isArray(importedQuotes)) {
+        // Add the imported quotes to the existing quotes array
+        quotes.push(...importedQuotes);
+        // Save the new, merged array to local storage
+        saveQuotes();
+        // Notify the user
+        alert('Quotes imported successfully!');
+        // Optional: Display a new random quote to show the update
+        // showRandomQuote(); // This function isn't in scope here, so we'll skip
+      } else {
+        alert('Invalid JSON file: The file does not contain a quote array.');
+      }
+    } catch (error) {
+      alert('Error reading or parsing file: ' + error.message);
+    }
+  };
+
+  // Read the file as text
+  fileReader.readAsText(file);
+}
+
+// --- Task 1: DOM Manipulation (Runs after page loads) ---
 window.addEventListener('DOMContentLoaded', () => {
   
   // Get references to DOM elements
   const quoteDisplay = document.getElementById('quoteDisplay');
   const newQuoteButton = document.getElementById('newQuote');
   const formContainer = document.getElementById('formContainer');
+  const exportButton = document.getElementById('exportButton'); // Get the new export button
 
-  // Function to show a random quote
+  /**
+   * Loads quotes from local storage.
+   * This will overwrite the default 'quotes' array if data exists.
+   */
+  function loadQuotes() {
+    const storedQuotes = localStorage.getItem('quotes');
+    if (storedQuotes) {
+      quotes = JSON.parse(storedQuotes);
+    }
+  }
+
+  /**
+   * Displays a random quote in the quoteDisplay element.
+   */
   function showRandomQuote() {
+    if (quotes.length === 0) {
+      quoteDisplay.innerHTML = '<p>No quotes available. Add some!</p>';
+      return;
+    }
     const randomIndex = Math.floor(Math.random() * quotes.length);
     const randomQuote = quotes[randomIndex];
     
-    // Update the quoteDisplay element
     quoteDisplay.innerHTML = `
       <p>"${randomQuote.text}"</p>
       <i>- ${randomQuote.category}</i>
     `;
   }
 
-  // Function to add a new quote (handles the logic)
+  /**
+   * Handles the logic for adding a new quote from the form.
+   */
   function addQuote() {
-    // Get values from the dynamically created inputs
     const newQuoteTextInput = document.getElementById('newQuoteText');
     const newQuoteCategoryInput = document.getElementById('newQuoteCategory');
     
-    const newText = newQuoteTextInput.value;
-    const newCategory = newQuoteCategoryInput.value;
+    const newText = newQuoteTextInput.value.trim();
+    const newCategory = newQuoteCategoryInput.value.trim();
 
-    // Check if both fields are filled
     if (newText && newCategory) {
-      // Create new quote object
       const newQuote = {
         text: newText,
         category: newCategory
       };
 
-      // Add to the quotes array (Fix for: Check #2)
+      // Add to the quotes array
       quotes.push(newQuote);
+      
+      // *** TASK 2 UPDATE: Save to local storage ***
+      saveQuotes();
 
       // Clear the input fields
       newQuoteTextInput.value = '';
       newQuoteCategoryInput.value = '';
 
-      // Update the DOM (Fix for: Check #2)
+      // Update the DOM
       quoteDisplay.innerHTML = `
         <p>"${newQuote.text}"</p>
         <i>- ${newQuote.category}</i>
@@ -69,32 +164,27 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Function to dynamically create the quote form (Fix for: Check #1)
+  /**
+   * Dynamically creates and appends the "Add Quote" form.
+   */
   function createAddQuoteForm() {
-    // Create h2 title
     const title = document.createElement('h2');
     title.textContent = 'Add a New Quote';
 
-    // Create text input
     const textInput = document.createElement('input');
-    textInput.id = 'newQuoteText'; // Give it an ID so addQuote can find it
+    textInput.id = 'newQuoteText';
     textInput.type = 'text';
     textInput.placeholder = 'Enter a new quote';
 
-    // Create category input
     const categoryInput = document.createElement('input');
-    categoryInput.id = 'newQuoteCategory'; // Give it an ID
+    categoryInput.id = 'newQuoteCategory';
     categoryInput.type = 'text';
     categoryInput.placeholder = 'Enter quote category';
 
-    // Create button
     const addButton = document.createElement('button');
     addButton.textContent = 'Add Quote';
-    
-    // Add event listener to the new button
     addButton.addEventListener('click', addQuote);
 
-    // Append all new elements to the form container
     formContainer.appendChild(title);
     formContainer.appendChild(textInput);
     formContainer.appendChild(categoryInput);
@@ -103,15 +193,20 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // --- SCRIPT EXECUTION ---
   
-  // Add event listener to the "Show New Quote" button (Fix for: Check #3)
-  // Now it's safely inside DOMContentLoaded
+  // 1. Load quotes from local storage *first*
+  loadQuotes();
+
+  // 2. Set up event listeners
   if (newQuoteButton) {
     newQuoteButton.addEventListener('click', showRandomQuote);
   }
+  if (exportButton) {
+    exportButton.addEventListener('click', exportQuotes);
+  }
 
-  // Call the function to create the form
+  // 3. Build the dynamic form
   createAddQuoteForm();
 
-  // Show a random quote on initial page load
+  // 4. Show a random quote on initial page load
   showRandomQuote();
 });

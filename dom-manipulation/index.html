@@ -17,6 +17,16 @@
 
   <div id="formContainer"></div>
 
+  <hr>
+
+  <div>
+    <h2>Data Management</h2>
+    <button id="exportButton">Export Quotes (JSON)</button>
+    
+    <p>Import Quotes from JSON file:</p>
+    <input type="file" id="importFile" accept=".json" onchange="importFromJsonFile(event)" />
+  </div>
+
   <script src="script.js"></script>
 </body>
 </html>
