@@ -11,9 +11,10 @@
 
   <div>
     <h2>Filter Quotes by Category</h2>
-    <select id="categoryFilter" onchange="filterQuotes()">
+    <!-- Removed inline onchange (will be handled in JS) -->
+    <select id="categoryFilter">
       <option value="all">All Categories</option>
-      </select>
+    </select>
   </div>
 
   <hr>
@@ -33,7 +34,7 @@
     <button id="exportButton">Export Quotes (JSON)</button>
     
     <p>Import Quotes from JSON file:</p>
-    <input type="file" id="importFile" accept=".json" onchange="importFromJsonFile(event)" />
+    <input type="file" id="importFile" accept=".json" />
   </div>
 
   <script src="script.js"></script>
